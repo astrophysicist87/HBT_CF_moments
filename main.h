@@ -10,9 +10,18 @@
 #include <cstdlib>
 #include <complex>
 
+#include <gsl/gsl_multifit_nlin.h>
+#include <gsl/gsl_multifit.h>
+#include <gsl/gsl_linalg.h>
+
+#include "gauss/gauss_quadrature.h"
+#include "lib.h"
+
 using namespace std;
 
 #define USE_RAPIDITY_SYMMETRY		1
+
+const double hbarC = 0.197327053;		//GeV*fm
 
 extern const int n_tau_pts, n_eta_pts, n_r_pts, n_phi_pts;
 extern const int n_qo_pts, n_qs_pts, n_ql_pts;
@@ -20,12 +29,29 @@ extern const int n_qo_pts, n_qs_pts, n_ql_pts;
 extern vector<double> tau_pts, tau_wts, eta_pts, eta_wts;
 extern vector<double> r_pts, r_wts, phi_pts, phi_wts;
 extern vector<double> qo_pts, qs_pts, ql_pts;
+extern vector<double> S_vector;
+extern double *** correlation_function;
 
 extern double M, K_Y, K_T, K_Phi;
-extern double T_0, eta_0, Delta_eta, Rad, tau_f, Delta_tau;
+extern double T_0, eta_0, eta_f, Delta_eta, Rad, tau_f, Delta_tau;
 extern double v_2_bar, psi_2_bar, eps_2_bar;
 extern double v_3_bar, psi_3_bar, eps_3_bar;
 extern double qo_min, qo_max, qs_min, qs_max, ql_min, ql_max;
+extern const double tau_min, tau_max;
+extern const double eta_min, eta_max;
+extern const double r_min, r_max;
+extern const double phi_min, phi_max;
+
+///////////
+void set_up();
+void calculate_correlation_function();
+void fit_correlation_function();
+void output_results();
+void clean_up();
+///////////
+double eta_t(double r, double phi);
+double S_function (double tau, double eta, double r, double phi);
+///////////
 
 void set_up()
 {
@@ -61,7 +87,31 @@ void set_up()
 	for (int iphi = 0; iphi < n_phi_pts; ++iphi)
 		S_vector[idx++] = S_function(tau_pts[itau], eta_pts[ieta], r_pts[ir], phi_pts[iphi]);
 
+	//set up CF
+	correlation_function = new double ** [n_qo_pts];
+	for (int iqo = 0; iqo < n_qo_pts; ++iqo)
+	{
+		correlation_function[iqo] = new double * [n_qs_pts];
+		for (int iqs = 0; iqs < n_qs_pts; ++iqs)
+		{
+			correlation_function[iqo][iqs] = new double [n_ql_pts];
+			for (int iql = 0; iql < n_ql_pts; ++iql)
+				correlation_function[iqo][iqs][iql] = 0.0;
+		}
+		
+	}
+	
 	return;
+}
+
+double eta_t(double r, double phi)
+{
+	return (
+		eta_f * (r/Rad)
+				* ( 1.0
+					+ 2.0 * v_2_bar * ( cos( 2.0 * ( phi - psi_2_bar ) ) )
+					+ 2.0 * v_3_bar * ( cos( 3.0 * ( phi - psi_3_bar ) ) ) )
+			);
 }
 
 double S_function (double tau, double eta, double r, double phi)
@@ -85,16 +135,6 @@ double S_function (double tau, double eta, double r, double phi)
 	return (exp(-term0 - term1 - term2 + term3 - term4));
 }
 
-
-double eta_t(double r, double phi)
-{
-	return (
-		eta_f * (r/Rad)
-				* ( 1.0
-					+ 2.0 * v_2_bar * ( cos( 2.0 * ( phi - psi_2_bar ) ) )
-					+ 2.0 * v_3_bar * ( cos( 3.0 * ( phi - psi_3_bar ) ) )
-			);
-}
 
 double CF_function(double qt, double qo, double qs, double ql)
 {
@@ -140,10 +180,13 @@ void calculate_correlation_function()
 	for (int iqs = 0; iqs < n_qs_pts; ++iqs)
 	for (int iql = 0; iql < n_ql_pts; ++iql)
 	{
-		double E1 = ...;
-		double E2 = ...;
-		double qt = E2 - E1;
-		correlation_function[iqo][iqs][iql] = CF_function(qt, qo_pts[iqo], qs_pts[iqs], ql_pts[iql]);
+		double qo = qo_pts[iqo], qs = qs_pts[iqs], ql = ql_pts[iql];
+		double q_dot_K = qo*K_T;
+		double xi2 = M*M+K_T*K_T+0.25*(qo*qo+qs*qs+ql*ql);
+		double E1 = sqrt(xi2 + q_dot_K);
+		double E2 = sqrt(xi2 - q_dot_K);
+		double qt = E1 - E2;
+		correlation_function[iqo][iqs][iql] = CF_function(qt, qo, qs, ql);
 	}
 
 	return;
@@ -151,7 +194,160 @@ void calculate_correlation_function()
 
 void fit_correlation_function()
 {
-	...;
+	const size_t data_length = n_qo_pts*n_qs_pts*n_ql_pts;  // # of points
+
+    double lambda, R_o, R_s, R_l, R_os;
+    int dim = 5;
+    int s_gsl;
+
+    double * V = new double [dim];
+    double * qweight = new double [dim];
+    double ** T = new double * [dim];
+    for(int i = 0; i < dim; i++)
+    {
+        V[i] = 0.0;
+        T[i] = new double [dim];
+        for(int j = 0; j < dim; j++)
+            T[i][j] = 0.0;
+    }
+
+    gsl_matrix * T_gsl = gsl_matrix_alloc (dim, dim);
+    gsl_matrix * T_inverse_gsl = gsl_matrix_alloc (dim, dim);
+    gsl_permutation * perm = gsl_permutation_alloc (dim);
+
+	//double ckp = cos_SP_pphi[ipphi], skp = sin_SP_pphi[ipphi];
+	double CF_err = 1.e-3;
+	for (int i = 0; i < n_qo_pts; i++)
+	for (int j = 0; j < n_qs_pts; j++)
+	for (int k = 0; k < n_ql_pts; k++)
+    {
+        //double qo = q1pts[i] * ckp + q2pts[j] * skp;
+        //double qs = -q1pts[i] * skp + q2pts[j] * ckp;
+        //double ql = q3pts[k];
+        double qo = qo_pts[i];
+        double qs = qs_pts[j];
+        double ql = ql_pts[k];
+        double correl_local = correlation_function[i][j][k]-1;
+        if(correl_local < 1e-15) continue;
+        double sigma_k_prime = CF_err/correl_local;
+            
+        double inv_sigma_k_prime_sq = 1./(sigma_k_prime*sigma_k_prime);
+        double log_correl_over_sigma_sq = log(correl_local)*inv_sigma_k_prime_sq;
+
+        qweight[0] = - 1.0;
+        qweight[1] = qo*qo;
+        qweight[2] = qs*qs;
+        qweight[3] = ql*ql;
+        qweight[4] = qo*qs;
+
+        for(int ij = 0; ij < dim; ij++)
+        {
+            V[ij] += qweight[ij]*log_correl_over_sigma_sq;
+            T[0][ij] += qweight[ij]*inv_sigma_k_prime_sq;
+        }
+
+        for(int ij = 1; ij < dim; ij++)
+            T[ij][0] = T[0][ij];
+            
+
+        for(int ij = 1; ij < dim; ij++)
+        {
+            for(int lm = 1; lm < dim; lm++)
+                T[ij][lm] += -qweight[ij]*qweight[lm]*inv_sigma_k_prime_sq;
+        }
+    }
+    for(int i = 0; i < dim; i++)
+        for(int j = 0; j < dim; j++)
+            gsl_matrix_set(T_gsl, i, j, T[i][j]);
+
+    // Make LU decomposition of matrix T_gsl
+    gsl_linalg_LU_decomp (T_gsl, perm, &s_gsl);
+    // Invert the matrix m
+    gsl_linalg_LU_invert (T_gsl, perm, T_inverse_gsl);
+
+    double **T_inverse = new double* [dim];
+    for(int i = 0; i < dim; i++)
+    {
+        T_inverse[i] = new double [dim];
+        for(int j = 0; j < dim; j++)
+            T_inverse[i][j] = gsl_matrix_get(T_inverse_gsl, i, j);
+    }
+    double *results = new double [dim];
+    for(int i = 0; i < dim; i++)
+    {
+        results[i] = 0.0;
+        for(int j = 0; j < dim; j++)
+            results[i] += T_inverse[i][j]*V[j];
+    }
+
+/*
+	lambda_Correl[ipt][ipphi] = exp(results[0]);
+	lambda_Correl_err[ipt][ipphi] = 0.0;
+	R2_out_GF[ipt][ipphi] = results[1]*hbarC*hbarC;
+	R2_side_GF[ipt][ipphi] = results[2]*hbarC*hbarC;
+	R2_long_GF[ipt][ipphi] = results[3]*hbarC*hbarC;
+	R2_outside_GF[ipt][ipphi] = results[4]*hbarC*hbarC;
+	R2_out_err[ipt][ipphi] = 0.0;
+	R2_side_err[ipt][ipphi] = 0.0;
+	R2_long_err[ipt][ipphi] = 0.0;
+	R2_outside_err[ipt][ipphi] = 0.0;
+*/
+cout << "lambda = " << exp(results[0]) << endl;
+cout << "R2o = " << results[1]*hbarC*hbarC << endl;
+cout << "R2s = " << results[2]*hbarC*hbarC << endl;
+cout << "R2l = " << results[3]*hbarC*hbarC << endl;
+cout << "R2os = " << results[4]*hbarC*hbarC << endl;
+
+    double chi_sq = 0.0;
+	for (int i = 0; i < n_qo_pts; i++)
+	for (int j = 0; j < n_qs_pts; j++)
+	for (int k = 0; k < n_ql_pts; k++)
+    {
+        double qo = qo_pts[i];
+        double qs = qs_pts[j];
+        double ql = ql_pts[k];
+        double correl_local = correlation_function[i][j][k]-1;
+        if(correl_local < 1e-15) continue;
+        double sigma_k_prime = CF_err/correl_local;
+
+        chi_sq += pow((log(correl_local) - results[0] 
+                       + results[1]*qo*qo 
+                       + results[2]*qs*qs
+                       + results[3]*ql*ql
+                       + results[4]*qo*qs), 2)
+                  /sigma_k_prime/sigma_k_prime;
+    }
+    //cout << "chi_sq/d.o.f = " << chi_sq/(qnpts - dim) << endl;
+    //chi_sq_per_dof = chi_sq/(qnpts - dim);
+
+    // clean up
+    gsl_matrix_free (T_gsl);
+    gsl_matrix_free (T_inverse_gsl);
+    gsl_permutation_free (perm);
+
+    delete [] qweight;
+    delete [] V;
+    for(int i = 0; i < dim; i++)
+    {
+        delete [] T[i];
+        delete [] T_inverse[i];
+    }
+    delete [] T;
+    delete [] T_inverse;
+    delete [] results;
+}
+
+void clean_up()
+{
+	//clean up CF
+	for (int iqo = 0; iqo < n_qo_pts; ++iqo)
+	{
+		for (int iqs = 0; iqs < n_qs_pts; ++iqs)
+			delete [] correlation_function[iqo][iqs];
+		delete [] correlation_function[iqo];
+	}
+	delete [] correlation_function;
+
 }
 
 // End of file
