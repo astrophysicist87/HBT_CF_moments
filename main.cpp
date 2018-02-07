@@ -1,3 +1,4 @@
+#include <omp.h>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -23,8 +24,9 @@ vector<double> S_vector;
 
 vector<double> qo_pts, qs_pts, ql_pts;
 double *** correlation_function;
+double spectra;
 
-double M = 0.13957, K_Y = 0.0, K_T = 0.5, K_Phi = 0.0;
+double M = 0.13957, K_Y = 0.0, K_Phi = 0.0;
 double T_0 = 0.12, eta_0 = 0.0, eta_f = 0.6, Delta_eta = 1.2, Rad = 5.0, tau_f = 6.0, Delta_tau = 1.0;
 double v_2_bar = 0.0, psi_2_bar = 0.0, eps_2_bar = 0.0;
 double v_3_bar = 0.0, psi_3_bar = 0.0, eps_3_bar = 0.0;
@@ -42,16 +44,32 @@ const double phi_min = 0.0, phi_max = 2*M_PI;
 /////////////////////////////////
 int main(int argc, char *argv[])
 {
-	set_up();
+	//vector<double> KT_pts(51);
+	//linspace(KT_pts, 0.0, 1.0);
 
-	calculate_correlation_function();
+	//for (int iKT = 0; iKT < KT_pts.size(); ++iKT)
+	//{
+		cout << "K_T = " << 0.5 << endl;
+		//cout << "Setting up..." << endl;
+		HBT::set_up(M, 0.5, K_Phi, K_Y);
 
-	fit_correlation_function();
+		//cout << "Getting spectra..." << endl;
+		HBT::calculate_spectra();
 
-	//output_results();
+		//cout << "Getting correlation function..." << endl;
+		HBT::calculate_correlation_function();
 
-	clean_up();
+		//cout << "Fitting correlation function..." << endl;
+		HBT::fit_correlation_function();
 
+		//output_results();
+
+		//cout << "Cleaning up..." << endl;
+		HBT::clean_up();
+		cout << endl << endl;
+	//}
+
+	//cout << "Finished." << endl;
 	return 0;
 }
 
