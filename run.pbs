@@ -6,7 +6,7 @@
 
 ulimit -n 1000
 
-export OMP_NUM_THREADS=24
+export OMP_NUM_THREADS=`nproc --all`
 time nice -n 0 ./run_HBT_CF_moments
 
 echo 'Finished processing and cleaning up'
