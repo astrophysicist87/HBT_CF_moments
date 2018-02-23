@@ -1,0 +1,12 @@
+#!/bin/bash
+#PBS -l walltime=168:00:00
+#PBS -l nodes=1:ppn=1
+#PBS -j oe
+#PBS -S /bin/bash
+
+ulimit -n 1000
+
+export OMP_NUM_THREADS=24
+time nice -n 0 ./run_HBT_CF_moments
+
+echo 'Finished processing and cleaning up'
