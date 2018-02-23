@@ -52,11 +52,11 @@ int main(int argc, char *argv[])
 
 	#pragma omp parallel for
 	for (int iKT = 0; iKT < KT_pts.size(); ++iKT)
-	for (int iKphi = 0; iKphi < iKphi_pts.size(); ++iKphi)
+	for (int iKphi = 0; iKphi < KPhi_pts.size(); ++iKphi)
 	{
-		cout << "K_T = " << KT_pts[iKT] << ", K_phi = " << Kphi_pts[iKphi] << endl;
+		cout << "K_T = " << KT_pts[iKT] << ", K_phi = " << KPhi_pts[iKphi] << endl;
 		cout << "\t --> Setting up..." << endl;
-		HBT::set_up(M, KT_pts[iKT], Kphi_pts[iKphi], K_Y);
+		HBT::set_up(M, KT_pts[iKT], KPhi_pts[iKphi], K_Y);
 
 		cout << "\t --> Getting spectra..." << endl;
 		HBT::calculate_spectra();
@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
 		cout << "\t --> Fitting correlation function..." << endl;
 		HBT::fit_correlation_function();
 
-		output_results();
+		//output_results();
 
 		cout << "\t --> Cleaning up..." << endl;
 		HBT::clean_up();
