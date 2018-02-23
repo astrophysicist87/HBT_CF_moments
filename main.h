@@ -242,7 +242,7 @@ namespace HBT
 
 	void calculate_correlation_function()
 	{
-		//#pragma omp parallel for
+		#pragma omp parallel for
 		for (int iqo = 0; iqo < n_qo_pts; ++iqo)
 		for (int iqs = 0; iqs < n_qs_pts; ++iqs)
 		for (int iql = 0; iql < n_ql_pts; ++iql)

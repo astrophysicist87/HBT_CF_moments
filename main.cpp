@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 	linspace(KT_pts, 0.0, 1.0);
 	linspace(KPhi_pts, 0.0, 2.0*M_PI);
 
-	#pragma omp parallel for
+	//#pragma omp parallel for
 	for (int iKT = 0; iKT < KT_pts.size(); ++iKT)
 	for (int iKphi = 0; iKphi < KPhi_pts.size(); ++iKphi)
 	{
