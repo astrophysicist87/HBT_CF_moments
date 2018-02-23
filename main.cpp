@@ -44,30 +44,31 @@ const double phi_min = 0.0, phi_max = 2*M_PI;
 /////////////////////////////////
 int main(int argc, char *argv[])
 {
-	//vector<double> KT_pts(51);
-	//linspace(KT_pts, 0.0, 1.0);
+	vector<double> KT_pts(21);
+	vector<double> KPhi_pts(36);
+	linspace(KT_pts, 0.0, 1.0);
 
-	//for (int iKT = 0; iKT < KT_pts.size(); ++iKT)
-	//{
-		cout << "K_T = " << 0.5 << endl;
-		//cout << "Setting up..." << endl;
+	for (int iKT = 0; iKT < KT_pts.size(); ++iKT)
+	{
+		cout << "K_T = " << KT_pts[iKT] << endl;
+		cout << "Setting up..." << endl;
 		HBT::set_up(M, 0.5, K_Phi, K_Y);
 
-		//cout << "Getting spectra..." << endl;
+		cout << "Getting spectra..." << endl;
 		HBT::calculate_spectra();
 
-		//cout << "Getting correlation function..." << endl;
+		cout << "Getting correlation function..." << endl;
 		HBT::calculate_correlation_function();
 
-		//cout << "Fitting correlation function..." << endl;
+		cout << "Fitting correlation function..." << endl;
 		HBT::fit_correlation_function();
 
-		//output_results();
+		output_results();
 
-		//cout << "Cleaning up..." << endl;
+		cout << "Cleaning up..." << endl;
 		HBT::clean_up();
 		cout << endl << endl;
-	//}
+	}
 
 	//cout << "Finished." << endl;
 	return 0;

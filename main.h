@@ -217,7 +217,7 @@ namespace HBT
 		const int Ncells = (int)S_vector.size();
 		double cos_K_Phi = cos(K_Phi), sin_K_Phi = sin(K_Phi);
 
-		#pragma omp simd
+		//#pragma omp simd
 		for (int idx = 0; idx < Ncells; ++idx)
 		{
 			EmissionFunction * local_EF = &(EmissionFunction_vector[idx]);
@@ -364,6 +364,13 @@ namespace HBT
 	cout << "R2s = " << results[2]*hbarC*hbarC << endl;
 	cout << "R2l = " << results[3]*hbarC*hbarC << endl;
 	cout << "R2os = " << results[4]*hbarC*hbarC << endl;
+	cout << "RESULTS: "
+			<< K_T << "   " << K_Phi << "   " << K_Y << "   "
+			<< exp(results[0]) << "   "
+			<< results[1]*hbarC*hbarC << "   "
+			<< results[2]*hbarC*hbarC << "   "
+			<< results[3]*hbarC*hbarC << "   "
+			<< results[4]*hbarC*hbarC << endl;
 
 		double chi_sq = 0.0;
 		for (int i = 0; i < n_qo_pts; i++)
