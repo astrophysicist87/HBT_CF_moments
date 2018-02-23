@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
 	vector<double> KT_pts(21);
 	vector<double> KPhi_pts(36);
 	linspace(KT_pts, 0.0, 1.0);
-	linspace(Kphi_pts, 0.0, 2.0*M_PI);
+	linspace(KPhi_pts, 0.0, 2.0*M_PI);
 
 	#pragma omp parallel for
 	for (int iKT = 0; iKT < KT_pts.size(); ++iKT)
