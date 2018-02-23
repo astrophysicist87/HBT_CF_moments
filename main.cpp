@@ -26,7 +26,7 @@ vector<double> qo_pts, qs_pts, ql_pts;
 double *** correlation_function;
 double spectra;
 
-double M = 0.13957, K_Y = 0.0, K_Phi = 0.0;
+double M = 0.13957, K_Y = 0.0;
 double T_0 = 0.12, eta_0 = 0.0, eta_f = 0.6, Delta_eta = 1.2, Rad = 5.0, tau_f = 6.0, Delta_tau = 1.0;
 double v_2_bar = 0.0, psi_2_bar = 0.0, eps_2_bar = 0.0;
 double v_3_bar = 0.0, psi_3_bar = 0.0, eps_3_bar = 0.0;
@@ -44,33 +44,37 @@ const double phi_min = 0.0, phi_max = 2*M_PI;
 /////////////////////////////////
 int main(int argc, char *argv[])
 {
+	cout << "Starting..." << endl;
 	vector<double> KT_pts(21);
 	vector<double> KPhi_pts(36);
 	linspace(KT_pts, 0.0, 1.0);
+	linspace(Kphi_pts, 0.0, 2.0*M_PI);
 
+	#pragma omp parallel for
 	for (int iKT = 0; iKT < KT_pts.size(); ++iKT)
+	for (int iKphi = 0; iKphi < iKphi_pts.size(); ++iKphi)
 	{
-		cout << "K_T = " << KT_pts[iKT] << endl;
-		cout << "Setting up..." << endl;
-		HBT::set_up(M, 0.5, K_Phi, K_Y);
+		cout << "K_T = " << KT_pts[iKT] << ", K_phi = " << Kphi_pts[iKphi] << endl;
+		cout << "\t --> Setting up..." << endl;
+		HBT::set_up(M, KT_pts[iKT], Kphi_pts[iKphi], K_Y);
 
-		cout << "Getting spectra..." << endl;
+		cout << "\t --> Getting spectra..." << endl;
 		HBT::calculate_spectra();
 
-		cout << "Getting correlation function..." << endl;
+		cout << "\t --> Getting correlation function..." << endl;
 		HBT::calculate_correlation_function();
 
-		cout << "Fitting correlation function..." << endl;
+		cout << "\t --> Fitting correlation function..." << endl;
 		HBT::fit_correlation_function();
 
 		output_results();
 
-		cout << "Cleaning up..." << endl;
+		cout << "\t --> Cleaning up..." << endl;
 		HBT::clean_up();
 		cout << endl << endl;
 	}
 
-	//cout << "Finished." << endl;
+	cout << "Finished all." << endl;
 	return 0;
 }
 
