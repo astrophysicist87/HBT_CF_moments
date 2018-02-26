@@ -3,12 +3,14 @@ SHELL=/bin/sh
 SRCS= \
 main.cpp \
 gauss/gauss_quadrature.cpp \
-lib.cpp
+lib.cpp \
+HBT.cpp
 
 HDRS= \
 gauss/gauss_quadrature.h \
-main.h \
-lib.h
+HBT.h \
+lib.h \
+parameters.h
 
 MAKEFILE=makefile
 
