@@ -30,12 +30,11 @@ class HBT
 	///////////
 	public:
 		HBT(double M, double K_T, double K_Phi, double K_Y);
-		//~HBT();
 
-		void calculate_correlation_function();
-		void fit_correlation_function();
-		//void output_results();
+		void calculate_correlation_function(double *** correlation_function);
+		void fit_correlation_function(double * results);
 		void calculate_spectra();
+		void calculate_SV_radii(double * results);
 		void clean_up();
 		///////////
 		double eta_t(double r, double phi);

@@ -24,6 +24,7 @@ HBT::HBT(double M_in, double K_T_in, double K_Phi_in, double K_Y_in)
 	K_T = K_T_in;
 	K_Phi = K_Phi_in;
 	K_Y = K_Y_in;
+
 	S_vector.clear();
 	EmissionFunction_vector.clear();
 
@@ -153,6 +154,65 @@ void HBT::calculate_spectra()
 					* S_vector[idx++];
 }
 
+double HBT::calculate_SV_radii(double * results)
+{
+	double sym_factor = ( USE_RAPIDITY_SYMMETRY ) ? 2.0 : 1.0;
+
+	double Sx2o = 0.0, Sx2s = 0.0, Sx2l = 0.0, St2 = 0.0;
+	double Sxot = 0.0, Sxst = 0.0, Sxlt = 0.0, Sxos = 0.0, Sxol = 0.0, Sxsl = 0.0;
+	double Sxo = 0.0, Sxs = 0.0, Sxl = 0.0, St = 0.0;
+
+	const int Ncells = (int)S_vector.size();
+	double cos_K_Phi = cos(K_Phi), sin_K_Phi = sin(K_Phi);
+	double betaT = K_T / sqrt(M*M+K_T*K_T);
+	double betaL = tanh(K_Y);
+
+	for (int idx = 0; idx < Ncells; ++idx)
+	{
+		EmissionFunction * local_EF = &(EmissionFunction_vector[idx]);
+		double t = local_EF->t;
+		double x = local_EF->x;
+		double y = local_EF->y;
+		double z = local_EF->z;
+		double xo = x*cos_K_Phi+y*sin_K_Phi;
+		double xs = y*cos_K_Phi-x*sin_K_Phi;
+		double xl = z;
+		double localEF = local_EF->S_with_weights;
+
+		Sx2o += sym_factor*xo*xo*localEF;
+		Sx2s += sym_factor*xs*xs*localEF;
+		Sx2l += sym_factor*xl*xl*localEF;
+		St2 += sym_factor*t*t*localEF;
+
+		Sxos += sym_factor*xo*xs*localEF;
+		Sxot += sym_factor*xo*t*localEF;
+		Sxst += sym_factor*xs*t*localEF;
+		//Sxlt = 0.0;
+		//Sxol = 0.0;
+		//Sxsl = 0.0;
+
+		Sxo += sym_factor*xo*localEF;
+		Sxs += sym_factor*xs*localEF;
+		//Sxl = 0.0;
+		St += sym_factor*xt*localEF;
+	}
+
+	double Tx2o = Sx2o - Sxo*Sxo;
+	double Tx2s = Sx2s - Sxs*Sxs;
+	double Tx2l = Sx2l - Sxl*Sxl;
+	double Tt2 = St2 - St*St;
+	double Txos = Sxos - Sxo*Sxs;
+	double Txot = Sxot - Sxo*St;
+	double Txst = Sxst - Sxs*St;
+
+	results[0] = Tx2o - 2.0*betaT*Txot+betaT*betaT*Tt2;		//R2o
+	results[1] = Tx2s;										//R2s
+	results[2] = Tx2l - 2.0*betaL*Txlt+betaL*betaL*Tt2;		//R2l
+	results[3] = Txos - betaT*Txst;	//R2os
+
+	return;
+}
+
 double HBT::CF_function(double qt, double qo, double qs, double ql)
 {
 	if (not USE_RAPIDITY_SYMMETRY)
@@ -191,7 +251,7 @@ double HBT::CF_function(double qt, double qo, double qs, double ql)
 	return ( 1.0 + norm( result / spectra ) );
 }
 
-void HBT::calculate_correlation_function()
+void HBT::calculate_correlation_function(double *** correlation_function_in)
 {
 	//#pragma omp parallel for collapse(3)
 	for (int iqo = 0; iqo < n_qo_pts; ++iqo)
@@ -205,12 +265,13 @@ void HBT::calculate_correlation_function()
 		double E2 = sqrt(xi2 - q_dot_K);
 		double qt = E1 - E2;
 		correlation_function[iqo][iqs][iql] = CF_function(qt, qo, qs, ql);
+		correlation_function_in[iqo][iqs][iql] = correlation_function[iqo][iqs][iql];
 	}
 
 	return;
 }
 
-void HBT::fit_correlation_function()
+void HBT::fit_correlation_function(double * finalResults)
 {
 	const size_t data_length = n_qo_pts*n_qs_pts*n_ql_pts;  // # of points
 
@@ -233,15 +294,11 @@ void HBT::fit_correlation_function()
 	gsl_matrix * T_inverse_gsl = gsl_matrix_alloc (dim, dim);
 	gsl_permutation * perm = gsl_permutation_alloc (dim);
 
-	//double ckp = cos_SP_pphi[ipphi], skp = sin_SP_pphi[ipphi];
 	double CF_err = 1.e-3;
 	for (int i = 0; i < n_qo_pts; i++)
 	for (int j = 0; j < n_qs_pts; j++)
 	for (int k = 0; k < n_ql_pts; k++)
 	{
-	    //double qo = q1pts[i] * ckp + q2pts[j] * skp;
-	    //double qs = -q1pts[i] * skp + q2pts[j] * ckp;
-	    //double ql = q3pts[k];
 	    double qo = qo_pts[i];
 	    double qs = qs_pts[j];
 	    double ql = ql_pts[k];
@@ -283,14 +340,14 @@ void HBT::fit_correlation_function()
 	// Invert the matrix m
 	gsl_linalg_LU_invert (T_gsl, perm, T_inverse_gsl);
 
-	double **T_inverse = new double* [dim];
+	double ** T_inverse = new double* [dim];
 	for(int i = 0; i < dim; i++)
 	{
 	    T_inverse[i] = new double [dim];
 	    for(int j = 0; j < dim; j++)
 	        T_inverse[i][j] = gsl_matrix_get(T_inverse_gsl, i, j);
 	}
-	double *results = new double [dim];
+	double * results = new double [dim];
 	for(int i = 0; i < dim; i++)
 	{
 	    results[i] = 0.0;
@@ -310,7 +367,7 @@ void HBT::fit_correlation_function()
 	R2_long_err[ipt][ipphi] = 0.0;
 	R2_outside_err[ipt][ipphi] = 0.0;
 */
-cout << "lambda = " << exp(results[0]) << endl;
+/*cout << "lambda = " << exp(results[0]) << endl;
 cout << "R2o = " << results[1]*hbarC*hbarC << endl;
 cout << "R2s = " << results[2]*hbarC*hbarC << endl;
 cout << "R2l = " << results[3]*hbarC*hbarC << endl;
@@ -321,7 +378,12 @@ cout << "RESULTS: "
 		<< results[1]*hbarC*hbarC << "   "
 		<< results[2]*hbarC*hbarC << "   "
 		<< results[3]*hbarC*hbarC << "   "
-		<< results[4]*hbarC*hbarC << endl;
+		<< results[4]*hbarC*hbarC << endl;*/
+	finalResults[0] = exp(results[0]);
+	finalResults[1] = results[1]*hbarC*hbarC;
+	finalResults[2] = results[2]*hbarC*hbarC;
+	finalResults[3] = results[3]*hbarC*hbarC;
+	finalResults[4] = results[4]*hbarC*hbarC;
 
 	double chi_sq = 0.0;
 	for (int i = 0; i < n_qo_pts; i++)
