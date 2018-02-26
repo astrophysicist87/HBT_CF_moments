@@ -17,7 +17,7 @@ COMMAND=run_HBT_CF_moments
 OBJS= $(addsuffix .o, $(basename $(SRCS)))
 
 CC= g++
-CFLAGS= -pg -g -O3 -fopenmp
+CFLAGS= -g -O3 -fopenmp
 
 WARNFLAGS=
 LDFLAGS= -lgsl -lgslcblas

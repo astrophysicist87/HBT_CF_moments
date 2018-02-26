@@ -1,5 +1,7 @@
 #!/bin/bash
 
-time nice -n 0 ./run_HBT_CF_moments &> run_HBT_CF_moments.out &
+echo 'Started processing at' `date`
 
-echo 'Finished processing and cleaning up'
+time nice -n 0 ./run_HBT_CF_moments &> tmp_wo_collapse.out
+
+echo 'Finished processing and cleaning up at' `date`
