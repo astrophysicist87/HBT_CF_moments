@@ -21,7 +21,8 @@ using namespace std;
 const double hbarC = 0.197327053;		//GeV*fm
 
 const int n_tau_pts = 31, n_eta_pts = 31, n_r_pts = 31, n_phi_pts = 31;
-const int n_qo_pts = 3, n_qs_pts = 3, n_ql_pts = 3;
+const int n_q_osl_pts = 3;
+const int n_qo_pts = n_q_osl_pts, n_qs_pts = n_q_osl_pts, n_ql_pts = n_q_osl_pts;
 
 const double T_0 = 0.12, eta_0 = 0.0, eta_f = 0.6, Delta_eta = 1.2, Rad = 5.0, tau_f = 6.0, Delta_tau = 1.0;
 const double v_2_bar = 0.0, psi_2_bar = 0.0, eps_2_bar = 0.0;

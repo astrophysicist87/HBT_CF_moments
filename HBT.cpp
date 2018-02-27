@@ -154,7 +154,7 @@ void HBT::calculate_spectra()
 					* S_vector[idx++];
 }
 
-double HBT::calculate_SV_radii(double * results)
+void HBT::calculate_SV_radii(double * results)
 {
 	double sym_factor = ( USE_RAPIDITY_SYMMETRY ) ? 2.0 : 1.0;
 
@@ -194,8 +194,21 @@ double HBT::calculate_SV_radii(double * results)
 		Sxo += sym_factor*xo*localEF;
 		Sxs += sym_factor*xs*localEF;
 		//Sxl = 0.0;
-		St += sym_factor*xt*localEF;
+		St += sym_factor*t*localEF;
 	}
+
+	Sx2o /= spectra;
+	Sx2s /= spectra;
+	Sx2l /= spectra;
+	St2 /= spectra;
+	Sxos /= spectra;
+	Sxot /= spectra;
+	Sxst /= spectra;
+
+	Sxo /= spectra;
+	Sxs /= spectra;
+	Sxl /= spectra;
+	St /= spectra;
 
 	double Tx2o = Sx2o - Sxo*Sxo;
 	double Tx2s = Sx2s - Sxs*Sxs;
@@ -204,11 +217,14 @@ double HBT::calculate_SV_radii(double * results)
 	double Txos = Sxos - Sxo*Sxs;
 	double Txot = Sxot - Sxo*St;
 	double Txst = Sxst - Sxs*St;
+	double Txlt = Sxlt - Sxl*St;	//==0
+	double Txol = Sxol - Sxo*Sxl;	//==0
+	double Txsl = Sxsl - Sxs*Sxl;	//==0
 
 	results[0] = Tx2o - 2.0*betaT*Txot+betaT*betaT*Tt2;		//R2o
 	results[1] = Tx2s;										//R2s
 	results[2] = Tx2l - 2.0*betaL*Txlt+betaL*betaL*Tt2;		//R2l
-	results[3] = Txos - betaT*Txst;	//R2os
+	results[3] = Txos - betaT*Txst;							//R2os
 
 	return;
 }

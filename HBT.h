@@ -40,6 +40,8 @@ class HBT
 		double eta_t(double r, double phi);
 		double S_function (double tau, double eta, double r, double phi);
 		double CF_function(double qt, double qo, double qs, double ql);
+		///////////
+		//void R2ij_Fourier_transform(double ** R2ij_vs_K, double ** R2ij_cfs, int max_order);
 };
 // End of file
 
