@@ -19,9 +19,10 @@ using namespace std;
 #define USE_RAPIDITY_SYMMETRY		1
 
 const double hbarC = 0.197327053;		//GeV*fm
+const complex<double> complex_i(0.0, 1.0);
 
 const int n_tau_pts = 31, n_eta_pts = 31, n_r_pts = 31, n_phi_pts = 31;
-const int n_q_osl_pts = 3;
+const int n_q_osl_pts = 11;
 const int n_qo_pts = n_q_osl_pts, n_qs_pts = n_q_osl_pts, n_ql_pts = n_q_osl_pts;
 
 const double T_0 = 0.12, eta_0 = 0.0, eta_f = 0.6, Delta_eta = 1.2, Rad = 5.0, tau_f = 6.0, Delta_tau = 1.0;

@@ -4,12 +4,13 @@ SRCS= \
 main.cpp \
 gauss/gauss_quadrature.cpp \
 lib.cpp \
-HBT.cpp
+HBT_at_K.cpp
 
 HDRS= \
 gauss/gauss_quadrature.h \
-HBT.h \
+HBT_at_K.h \
 lib.h \
+main.h \
 parameters.h
 
 MAKEFILE=makefile
