@@ -8,8 +8,7 @@
 #include <cstdlib>
 #include <complex>
 
-//#include <gsl/gsl_errno.h>
-//#include <gsl/gsl_sf_bessel.h>
+#include <gsl/gsl_errno.h>
 
 using namespace std;
 
@@ -21,6 +20,8 @@ using namespace std;
 /////////////////////////////////
 int main(int argc, char *argv[])
 {
+	gsl_set_error_handler_off();
+
 	cout << "Starting..." << endl;
 	KT_pts = vector<double>(nKT);
 	KPhi_pts = vector<double>(nKphi);
@@ -74,12 +75,14 @@ int main(int argc, char *argv[])
 	}
 	//end parallel
 
+	//set flow plane angles
+	get_flow();
+
+	//compute Fourier transform of differential radii
 	R2ij_Fourier_transform(n_max, 0);
 	R2ij_Fourier_transform(n_max, 1);
 
-	//not needed for n_max == 0
-	get_flow();
-
+	//get correlation function Fourier moments
 	get_CF_moments();
 
 	//begin parallel

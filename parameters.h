@@ -11,6 +11,8 @@
 #include <cstdlib>
 #include <complex>
 
+#include <gsl/gsl_errno.h>
+
 #include "gauss/gauss_quadrature.h"
 #include "lib.h"
 
@@ -27,7 +29,7 @@ const int n_qo_pts = n_q_osl_pts, n_qs_pts = n_q_osl_pts, n_ql_pts = n_q_osl_pts
 
 const double T_0 = 0.12, eta_0 = 0.0, eta_f = 0.6, Delta_eta = 1.2, Rad = 5.0, tau_f = 6.0, Delta_tau = 1.0;
 const double v_2_bar = 0.0, psi_2_bar = 0.0, eps_2_bar = 0.0;
-const double v_3_bar = 0.0, psi_3_bar = 0.0, eps_3_bar = 0.0;
+const double v_3_bar = 0.1, psi_3_bar = 0.0, eps_3_bar = 0.0;
 
 const double q_max = 0.100;	//GeV
 const double qo_min = -q_max, qo_max = q_max;
